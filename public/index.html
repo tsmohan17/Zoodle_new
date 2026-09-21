@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoodle - Scribble & Video Call Fun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/video.css">
+</head>
+<body class="doodle-bg">
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Screen 1: Lobby & Setup Screen -->
+  <main id="lobby-screen" class="screen active">
+    <div class="lobby-container">
+      <!-- Fun Logo Header -->
+      <header class="lobby-header">
+        <div class="logo-wrapper">
+          <span class="logo-letter z">Z</span>
+          <span class="logo-letter o1">o</span>
+          <span class="logo-letter o2">o</span>
+          <span class="logo-letter d">d</span>
+          <span class="logo-letter l">l</span>
+          <span class="logo-letter e">e</span>
+          <span class="logo-pencil">✏️</span>
+        </div>
+        <p class="tagline">Scribble with friends live on camera & have unlimited laughs!</p>
+      </header>
+
+      <!-- Lobby Main Card -->
+      <div class="lobby-card glass-panel">
+        <div class="lobby-grid">
+          <!-- Left: Avatar Customizer -->
+          <section class="avatar-section">
+            <h2 class="section-title">Design Your Doodler</h2>
+            <div class="avatar-stage">
+              <div id="avatar-preview" class="avatar-preview-box">
+                <!-- SVG Avatar renders here -->
+              </div>
+              <button id="btn-random-avatar" class="btn-dice" title="Randomize Avatar">🎲</button>
+            </div>
+
+            <div class="customizer-controls">
+              <div class="control-row">
+                <span class="control-label">Eyes</span>
+                <div class="stepper">
+                  <button id="btn-prev-eyes" class="step-btn">◀</button>
+                  <span id="label-eyes" class="step-value">Style 1</span>
+                  <button id="btn-next-eyes" class="step-btn">▶</button>
+                </div>
+              </div>
+
+              <div class="control-row">
+                <span class="control-label">Mouth</span>
+                <div class="stepper">
+                  <button id="btn-prev-mouth" class="step-btn">◀</button>
+                  <span id="label-mouth" class="step-value">Smile</span>
+                  <button id="btn-next-mouth" class="step-btn">▶</button>
+                </div>
+              </div>
+
+              <div class="control-row">
+                <span class="control-label">Color</span>
+                <div class="color-palette-small" id="avatar-color-palette">
+                  <!-- Color options populated by JS -->
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Center: User & Room Form -->
+          <section class="form-section">
+            <div class="input-group">
+              <label for="input-nickname">Your Nickname</label>
+              <div class="input-with-icon">
+                <span class="input-icon">👤</span>
+                <input type="text" id="input-nickname" placeholder="e.g. DoodleMaster99" maxlength="16" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="input-room-code">Room Code (to join friends)</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🔑</span>
+                <input type="text" id="input-room-code" placeholder="6-letter code" maxlength="6" style="text-transform: uppercase;">
+              </div>
+            </div>
+
+            <div class="room-action-buttons">
+              <button id="btn-join-room" class="btn btn-primary btn-bounce">
+                <span>🚀 Join Room</span>
+              </button>
+              <div class="divider-or"><span>OR</span></div>
+              <button id="btn-create-room" class="btn btn-secondary btn-bounce">
+                <span>✨ Create Private Room</span>
+              </button>
+            </div>
+
+            <!-- Host Settings Collapsible -->
+            <div id="host-settings" class="host-settings-box">
+              <span class="settings-title">⚙️ Room Settings</span>
+              <div class="settings-grid">
+                <label>
+                  <span>Rounds:</span>
+                  <select id="select-rounds">
+                    <option value="2">2 Rounds</option>
+                    <option value="3" selected>3 Rounds</option>
+                    <option value="5">5 Rounds</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Draw Time:</span>
+                  <select id="select-draw-time">
+                    <option value="45">45s (Fast)</option>
+                    <option value="75" selected>75s (Standard)</option>
+                    <option value="90">90s (Chill)</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Right: WhatsApp-Style Green Room & Camera Preview -->
+          <section class="preview-section">
+            <h2 class="section-title">Camera & Mic Test</h2>
+            <div class="camera-preview-container">
+              <video id="lobby-video-preview" autoplay playsinline muted></video>
+              <div id="lobby-cam-off-overlay" class="cam-off-overlay hidden">
+                <span class="overlay-avatar-icon">🙈</span>
+                <p>Camera is off</p>
+              </div>
+
+              <!-- Real-time Mic Level Bar -->
+              <div class="mic-visualizer-bar">
+                <div id="mic-level-fill" class="mic-level-fill"></div>
+              </div>
+            </div>
+
+            <div class="media-toggles-row">
+              <button id="btn-toggle-cam" class="btn-media-toggle active" title="Toggle Camera">
+                <span class="icon">📹</span>
+                <span class="label">Camera ON</span>
+              </button>
+              <button id="btn-toggle-mic" class="btn-media-toggle active" title="Toggle Mic">
+                <span class="icon">🎙️</span>
+                <span class="label">Mic ON</span>
+              </button>
+            </div>
+            <p class="preview-hint">You can also mute or turn off video anytime during the game!</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Screen 2: In-Game Screen -->
+  <main id="game-screen" class="screen">
+    <!-- Top Game Header Bar -->
+    <header class="game-header">
+      <div class="header-left">
+        <div class="brand-mini">
+          <span class="mini-logo">Zoodle</span>
+        </div>
+        <div class="round-badge">
+          Round <span id="current-round-text">1</span> / <span id="max-rounds-text">3</span>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <!-- Masked Word Hint Display -->
+        <div class="word-hint-container">
+          <span class="word-hint-title" id="word-hint-status">Waiting to start...</span>
+          <div class="masked-word" id="masked-word-display">_ _ _ _ _</div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Circular Timer -->
+        <div class="circular-timer" id="timer-box">
+          <svg class="timer-svg" viewBox="0 0 44 44">
+            <circle class="timer-bg" cx="22" cy="22" r="18"></circle>
+            <circle class="timer-progress" id="timer-progress-ring" cx="22" cy="22" r="18"></circle>
+          </svg>
+          <span class="timer-digits" id="timer-text">75</span>
+        </div>
+
+        <div class="room-pill" id="room-code-pill" title="Click to copy invite link">
+          <span>Room: </span>
+          <strong id="display-room-code">------</strong>
+          <button class="btn-copy-code" id="btn-copy-room">📋</button>
+        </div>
+
+        <button id="btn-leave-room" class="btn-leave" title="Leave Room">✕</button>
+      </div>
+    </header>
+
+    <!-- Main Game Board Grid -->
+    <div class="game-grid-container">
+      <!-- 1. Left Column: Player Leaderboard -->
+      <aside class="game-sidebar-left">
+        <div class="scoreboard-card glass-panel">
+          <div class="scoreboard-title">
+            <span>🏆 Players</span>
+            <span class="player-count-badge" id="player-count-badge">1</span>
+          </div>
+          <div class="players-list" id="players-list-container">
+            <!-- Player items populated dynamically -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- 2. Middle Column: Canvas & Tool Bar -->
+      <section class="game-center-area">
+        <!-- In-canvas drawer overlay status (e.g. "Alex is drawing!") -->
+        <div class="canvas-banner" id="canvas-banner">
+          <span id="banner-text">Waiting for host to start game...</span>
+        </div>
+
+        <div class="canvas-wrapper">
+          <canvas id="drawing-canvas" width="800" height="550"></canvas>
+        </div>
+
+        <!-- Canvas Controls Toolbar (Only active for current drawer) -->
+        <div class="canvas-toolbar glass-panel" id="canvas-toolbar">
+          <!-- Drawing Tools -->
+          <div class="tool-group">
+            <button class="tool-btn active" data-tool="brush" id="tool-brush" title="Brush">🖌️</button>
+            <button class="tool-btn" data-tool="fill" id="tool-fill" title="Fill Bucket">🪣</button>
+            <button class="tool-btn" data-tool="eraser" id="tool-eraser" title="Eraser">🧹</button>
+          </div>
+
+          <!-- Color Palette -->
+          <div class="tool-group palette-group" id="canvas-palette">
+            <!-- Colors inserted by JS -->
+          </div>
+
+          <!-- Custom Color Picker -->
+          <div class="tool-group">
+            <input type="color" id="custom-color-picker" value="#000000" title="Custom Color">
+          </div>
+
+          <!-- Brush Sizes -->
+          <div class="tool-group size-group">
+            <button class="size-dot active" data-size="3" title="Small (3px)"><span style="width:6px;height:6px;"></span></button>
+            <button class="size-dot" data-size="8" title="Medium (8px)"><span style="width:10px;height:10px;"></span></button>
+            <button class="size-dot" data-size="16" title="Large (16px)"><span style="width:16px;height:16px;"></span></button>
+            <button class="size-dot" data-size="32" title="Extra Large (32px)"><span style="width:22px;height:22px;"></span></button>
+          </div>
+
+          <!-- Actions -->
+          <div class="tool-group action-group">
+            <button class="action-btn" id="btn-undo" title="Undo">↩️</button>
+            <button class="action-btn danger" id="btn-clear" title="Clear Canvas">🗑️</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Right Column: WhatsApp Video Call Grid & Live Guess Chat -->
+      <aside class="game-sidebar-right">
+        <!-- WhatsApp-Grade Video Panel -->
+        <div class="video-conference-panel glass-panel">
+          <div class="video-panel-header">
+            <div class="video-status-indicator">
+              <span class="pulse-dot"></span>
+              <span>HD Video Room</span>
+            </div>
+            <!-- Video Reaction Bar -->
+            <div class="reaction-bar" id="reaction-bar">
+              <button class="btn-react" data-reaction="😂">😂</button>
+              <button class="btn-react" data-reaction="🔥">🔥</button>
+              <button class="btn-react" data-reaction="👏">👏</button>
+              <button class="btn-react" data-reaction="🤯">🤯</button>
+              <button class="btn-react" data-reaction="❤️">❤️</button>
+            </div>
+          </div>
+
+          <!-- Video Grid Container -->
+          <div class="video-grid" id="video-grid">
+            <!-- Local User Video Tile -->
+            <div class="video-tile" id="local-video-card">
+              <video id="local-video" autoplay playsinline muted></video>
+              <div id="local-cam-off-placeholder" class="video-placeholder hidden">
+                <div class="placeholder-avatar" id="local-placeholder-avatar"></div>
+              </div>
+              <div class="video-overlay">
+                <span class="user-tag" id="local-user-tag">You (Host)</span>
+                <div class="audio-wave" id="local-audio-wave">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            </div>
+            <!-- Remote peer video cards added here dynamically -->
+          </div>
+
+          <!-- Video Bar Bottom Controls -->
+          <div class="video-controls-bar">
+            <button id="in-game-cam-toggle" class="control-circle-btn active" title="Toggle Camera">📹</button>
+            <button id="in-game-mic-toggle" class="control-circle-btn active" title="Toggle Mic">🎙️</button>
+          </div>
+        </div>
+
+        <!-- Real-Time Guessing Chat -->
+        <div class="chat-container glass-panel">
+          <div class="chat-messages" id="chat-messages-box">
+            <div class="system-chat-msg welcome">
+              👋 Welcome to Zoodle! Type your guesses in the box below.
+            </div>
+          </div>
+
+          <form id="chat-form" class="chat-input-form">
+            <input type="text" id="input-guess" placeholder="Type your guess here..." maxlength="100" autocomplete="off">
+            <button type="submit" id="btn-send-guess" class="btn-send">
+              <span>➤</span>
+            </button>
+          </form>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Floating Start Game Button for Host -->
+    <div id="host-start-container" class="host-start-float">
+      <div class="host-float-card glass-panel">
+        <p>🎮 You are the Host! Start whenever everyone is ready.</p>
+        <button id="btn-start-game" class="btn btn-primary btn-bounce btn-large">
+          ▶ Start Zoodle Match!
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+
+  <!-- 1. Word Selection Modal (Drawer Only) -->
+  <div id="modal-word-select" class="modal-overlay hidden">
+    <div class="modal-card word-select-card bounce-in">
+      <h2 class="modal-title">🎨 It's Your Turn to Draw!</h2>
+      <p class="modal-subtitle">Choose one word to sketch:</p>
+      <div class="word-choice-timer">Time remaining: <span id="word-select-timer">15</span>s</div>
+      <div class="word-choices-grid" id="word-choices-container">
+        <!-- 3 Word Buttons inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Round End Summary Modal -->
+  <div id="modal-round-end" class="modal-overlay hidden">
+    <div class="modal-card round-end-card bounce-in">
+      <div class="round-end-icon">🎉</div>
+      <h2 class="modal-title" id="round-end-reason">Round Finished!</h2>
+      <div class="revealed-word-box">
+        <span>The secret word was:</span>
+        <h1 id="round-revealed-word">DINOSAUR</h1>
+      </div>
+      <div class="round-podium-preview" id="round-podium-container">
+        <!-- Round points list -->
+      </div>
+      <p class="round-countdown-hint">Next drawer in <span id="next-turn-timer">5</span>s...</p>
+    </div>
+  </div>
+
+  <!-- 3. Final Game Podium Modal -->
+  <div id="modal-game-over" class="modal-overlay hidden">
+    <div class="modal-card game-over-card bounce-in">
+      <h1 class="game-over-title">🏆 Match Champions! 🏆</h1>
+      <div class="podium-wrapper" id="game-podium-wrapper">
+        <!-- 1st, 2nd, 3rd place cartoon avatars on podium blocks -->
+      </div>
+      <div class="final-scores-table" id="final-scores-list">
+        <!-- Full list of players -->
+      </div>
+      <div class="game-over-actions">
+        <button id="btn-play-again" class="btn btn-primary btn-bounce">🔄 Play Again</button>
+        <button id="btn-back-to-lobby" class="btn btn-secondary">🏠 Back to Lobby</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Socket.io client script & App scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/sounds.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

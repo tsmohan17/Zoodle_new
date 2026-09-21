@@ -1,0 +1,22 @@
+{
+  "easy": [
+    "cat", "dog", "sun", "moon", "tree", "house", "car", "apple", "banana", "fish",
+    "smile", "star", "ball", "book", "door", "hat", "cup", "bed", "shoe", "ring",
+    "clock", "bird", "frog", "boat", "cake", "duck", "eye", "fork", "kite", "nose",
+    "pizza", "rain", "sock", "tent", "worm", "bell", "egg", "fire", "leaf", "ship",
+    "baby", "bear", "bone", "coin", "drum", "hand", "milk", "pear", "lion", "rose"
+  ],
+  "medium": [
+    "dinosaur", "astronaut", "pirate", "guitar", "skateboard", "butterfly", "hamburger", "sunglasses", "volcano", "octopus",
+    "popcorn", "kangaroo", "camera", "rainbow", "helicopter", "snowman", "cactus", "submarine", "rollercoaster", "campfire",
+    "treasure", "scarecrow", "diamond", "jellyfish", "pineapple", "telescope", "microscope", "waterfall", "lighthouse", "chainsaw",
+    "flamingo", "chameleon", "ninja", "wizard", "detective", "zombie", "vampire", "alien", "robot", "superman",
+    "spiderweb", "parachute", "traffic light", "lawnmower", "boomerang", "sandcastle", "fireworks", "magic wand", "hot dog", "windmill"
+  ],
+  "hard": [
+    "time machine", "solar eclipse", "haunted house", "black hole", "gravity", "brainstorm", "roller skates", "electric guitar", "origami", "quicksand",
+    "labyrinth", "constellation", "virtual reality", "satellite", "meteor shower", "bermuda triangle", "time traveler", "artificial intelligence", "fossil", "archaeology",
+    "unicycle", "hoverboard", "jack-in-the-box", "crystal ball", "hypnosis", "nightmare", "parallel universe", "deep sea diver", "trapeze artist", "ventriloquist",
+    "breakdance", "moonwalk", "belly dancer", "tightrope walker", "thunderstorm", "earthquake", "carnival", "roller coaster loop", "escapologist", "illusionist"
+  ]
+}
