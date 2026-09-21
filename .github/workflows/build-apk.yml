@@ -23,10 +23,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -37,6 +34,10 @@ jobs:
       - name: Sync Capacitor Android
         run: npx cap sync android
 
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+
       - name: Make Gradle Executable
         run: chmod +x android/gradlew
 
@@ -45,7 +46,7 @@ jobs:
           cd android
           ./gradlew assembleDebug --no-daemon
 
-      - name: Copy & Prepare APK
+      - name: Copy & Rename APK
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk zoodle.apk
           ls -lh zoodle.apk
@@ -60,8 +61,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.1
-          name: "Zoodle Android APK v1.0.1"
+          tag_name: v1.0.2
+          name: "Zoodle Android APK v1.0.2"
           body: |
             🎨 **Zoodle - Multiplayer Scribble Game with WhatsApp-grade Video Conferencing**
             
