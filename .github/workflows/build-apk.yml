@@ -34,8 +34,9 @@ jobs:
       - name: Sync Capacitor Android
         run: npx cap sync android
 
-      - name: Accept Android SDK Licenses
+      - name: Install Android SDK Platform 35 & Accept Licenses
         run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" || true
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
       - name: Make Gradle Executable
@@ -61,8 +62,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.2
-          name: "Zoodle Android APK v1.0.2"
+          tag_name: v1.0.3
+          name: "Zoodle Android APK v1.0.3"
           body: |
             🎨 **Zoodle - Multiplayer Scribble Game with WhatsApp-grade Video Conferencing**
             
