@@ -1,5 +1,7 @@
 package com.zoodle.game;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -10,9 +12,13 @@ import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+
+    private static final int PERMISSION_REQUEST_CODE = 101;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +33,9 @@ public class MainActivity extends BridgeActivity {
         int darkBg = Color.parseColor("#0d1b2a");
         window.setStatusBarColor(darkBg);
         window.setNavigationBarColor(darkBg);
+
+        // Request runtime Camera & Microphone permissions
+        requestRuntimePermissions();
 
         // Hardware Acceleration & Native Performance Tuning
         if (this.bridge != null && this.bridge.getWebView() != null) {
@@ -50,6 +59,21 @@ public class MainActivity extends BridgeActivity {
                     });
                 }
             });
+        }
+    }
+
+    private void requestRuntimePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            boolean needCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED;
+            boolean needAudio = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED;
+            
+            if (needCamera || needAudio) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO},
+                    PERMISSION_REQUEST_CODE
+                );
+            }
         }
     }
 }

@@ -27,6 +27,8 @@ function showToast(message, type = 'info') {
     toast.style.transition = 'all 0.3s ease-out';
     setTimeout(() => toast.remove(), 300);
   }, 3500);
+}
+
 function triggerHaptic(type = 'light') {
   if (window.navigator && window.navigator.vibrate) {
     if (type === 'light') window.navigator.vibrate(15);
@@ -36,64 +38,113 @@ function triggerHaptic(type = 'light') {
   }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Initialize Socket.IO (Local bundle connects to live cloud server when in APK)
-  const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '3000';
-  const isWebHosted = window.location.protocol.startsWith('http') && !window.location.hostname.includes('capacitor') && !isLocalDev;
-  const BACKEND_URL = isWebHosted ? window.location.origin : (isLocalDev ? 'http://localhost:3000' : 'https://zoodle-kqah.onrender.com');
-  
-  socket = io(BACKEND_URL, {
-    transports: ['websocket', 'polling']
-  });
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Synchronously setup all UI components immediately so buttons are ALWAYS interactive
+  try {
+    setupAvatarUI();
+  } catch (err) {
+    console.error('setupAvatarUI error:', err);
+  }
+
+  try {
+    setupCanvasUI();
+  } catch (err) {
+    console.error('setupCanvasUI error:', err);
+  }
+
+  try {
+    setupLobbyActions();
+  } catch (err) {
+    console.error('setupLobbyActions error:', err);
+  }
+
+  try {
+    setupInGameControls();
+  } catch (err) {
+    console.error('setupInGameControls error:', err);
+  }
 
   // 2. Initialize Canvas Engine
-  canvasEngine = new CanvasEngine('drawing-canvas');
+  try {
+    canvasEngine = new CanvasEngine('drawing-canvas');
+    canvasEngine.onStrokeEmit = (stroke) => {
+      if (socket && socket.connected) socket.emit('draw-stroke', stroke);
+    };
+    canvasEngine.onFillEmit = (fill) => {
+      if (socket && socket.connected) socket.emit('draw-fill', fill);
+    };
 
-  // Canvas emit bindings
-  canvasEngine.onStrokeEmit = (stroke) => {
-    socket.emit('draw-stroke', stroke);
-  };
-  canvasEngine.onFillEmit = (fill) => {
-    socket.emit('draw-fill', fill);
-  };
-
-  // Clear button
-  document.getElementById('btn-clear').addEventListener('click', () => {
-    if (canvasEngine.isDrawerActive) {
-      window.soundManager.playPop();
-      canvasEngine.clear();
-      socket.emit('draw-clear');
+    const btnClear = document.getElementById('btn-clear');
+    if (btnClear) {
+      btnClear.addEventListener('click', () => {
+        triggerHaptic('medium');
+        if (canvasEngine && canvasEngine.isDrawerActive) {
+          window.soundManager.playPop();
+          canvasEngine.clear();
+          if (socket && socket.connected) socket.emit('draw-clear');
+        }
+      });
     }
-  });
 
-  // Undo button
-  document.getElementById('btn-undo').addEventListener('click', () => {
-    if (canvasEngine.isDrawerActive) {
-      window.soundManager.playPop();
-      socket.emit('draw-undo');
+    const btnUndo = document.getElementById('btn-undo');
+    if (btnUndo) {
+      btnUndo.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (canvasEngine && canvasEngine.isDrawerActive) {
+          window.soundManager.playPop();
+          if (socket && socket.connected) socket.emit('draw-undo');
+        }
+      });
     }
-  });
+  } catch (err) {
+    console.error('Canvas initialization error:', err);
+  }
 
-  // 3. Initialize WebRTC Manager
-  webrtcManager = new WebRTCManager(socket);
-  await webrtcManager.initLocalMedia('lobby-video-preview');
+  // 3. Resolve Backend URL (Cloud Render server for Android APK & production web)
+  let BACKEND_URL = 'https://zoodle-kqah.onrender.com';
+  if (window.location.hostname === 'localhost' && window.location.port === '3000') {
+    BACKEND_URL = 'http://localhost:3000';
+  } else if (window.location.hostname.includes('onrender.com')) {
+    BACKEND_URL = window.location.origin;
+  }
 
-  // 4. Initialize Game Manager
-  gameManager = new GameManager(socket, canvasEngine, webrtcManager);
+  // 4. Initialize Socket.IO connection
+  try {
+    if (typeof io !== 'undefined') {
+      socket = io(BACKEND_URL, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 15,
+        timeout: 10000
+      });
 
-  // 5. Setup Avatar Customizer UI
-  setupAvatarUI();
+      socket.on('connect', () => {
+        console.log('Connected to Zoodle Server:', socket.id);
+      });
 
-  // 6. Setup Drawing Tools & Palette UI
-  setupCanvasUI();
+      socket.on('connect_error', (err) => {
+        console.warn('Socket connect error:', err.message);
+      });
+    } else {
+      console.warn('Socket.IO client library not loaded yet');
+    }
+  } catch (err) {
+    console.error('Socket initialization failed:', err);
+  }
 
-  // 7. Setup Lobby & Joining UI
-  setupLobbyActions();
+  // 5. Initialize WebRTC Manager & GameManager
+  try {
+    webrtcManager = new WebRTCManager(socket);
+    gameManager = new GameManager(socket, canvasEngine, webrtcManager);
 
-  // 8. Setup In-Game Reactions and Media Controls
-  setupInGameControls();
+    // Asynchronously initialize local camera & mic preview without blocking UI
+    webrtcManager.initLocalMedia('lobby-video-preview').catch(err => {
+      console.warn('WebRTC local media init non-fatal:', err);
+    });
+  } catch (err) {
+    console.error('WebRTC / GameManager initialization error:', err);
+  }
 
-  // Check URL hash for direct room join (e.g. #ABCD12)
+  // 6. Check URL hash for direct room join (e.g. #ABCD12)
   if (window.location.hash && window.location.hash.length > 1) {
     const codeFromHash = window.location.hash.substring(1).toUpperCase().trim();
     const roomInput = document.getElementById('input-room-code');
@@ -110,70 +161,92 @@ function setupAvatarUI() {
   const paletteBox = document.getElementById('avatar-color-palette');
 
   function renderCurrentAvatar() {
-    avatarBox.innerHTML = window.avatarGen.renderSVG();
-    const eyeObj = EYE_STYLES.find(e => e.id === window.avatarGen.current.eyes);
-    const mouthObj = MOUTH_STYLES.find(m => m.id === window.avatarGen.current.mouth);
-    if (labelEyes) labelEyes.innerText = eyeObj ? eyeObj.name : 'Style 1';
-    if (labelMouth) labelMouth.innerText = mouthObj ? mouthObj.name : 'Smile';
+    if (avatarBox && window.avatarGen) {
+      avatarBox.innerHTML = window.avatarGen.renderSVG();
+    }
+    if (window.avatarGen && typeof EYE_STYLES !== 'undefined') {
+      const eyeObj = EYE_STYLES.find(e => e.id === window.avatarGen.current.eyes);
+      const mouthObj = MOUTH_STYLES.find(m => m.id === window.avatarGen.current.mouth);
+      if (labelEyes) labelEyes.innerText = eyeObj ? eyeObj.name : 'Style 1';
+      if (labelMouth) labelMouth.innerText = mouthObj ? mouthObj.name : 'Smile';
+    }
   }
 
   // Populate color swatches
-  paletteBox.innerHTML = '';
-  AVATAR_COLORS.forEach(c => {
-    const swatch = document.createElement('div');
-    swatch.className = `avatar-color-swatch ${c === window.avatarGen.current.color ? 'active' : ''}`;
-    swatch.style.backgroundColor = c;
-    swatch.addEventListener('click', () => {
-      window.soundManager.playPop();
-      window.avatarGen.current.color = c;
-      document.querySelectorAll('.avatar-color-swatch').forEach(s => s.classList.remove('active'));
-      swatch.classList.add('active');
-      renderCurrentAvatar();
+  if (paletteBox && typeof AVATAR_COLORS !== 'undefined') {
+    paletteBox.innerHTML = '';
+    AVATAR_COLORS.forEach(c => {
+      const swatch = document.createElement('div');
+      swatch.className = `avatar-color-swatch ${window.avatarGen && c === window.avatarGen.current.color ? 'active' : ''}`;
+      swatch.style.backgroundColor = c;
+      swatch.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (window.soundManager) window.soundManager.playPop();
+        if (window.avatarGen) window.avatarGen.current.color = c;
+        document.querySelectorAll('.avatar-color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        renderCurrentAvatar();
+      });
+      paletteBox.appendChild(swatch);
     });
-    paletteBox.appendChild(swatch);
-  });
+  }
 
   // Steppers
-  document.getElementById('btn-next-eyes').addEventListener('click', () => {
-    window.soundManager.playPop();
-    let next = window.avatarGen.current.eyes + 1;
-    if (next > EYE_STYLES.length) next = 1;
-    window.avatarGen.current.eyes = next;
-    renderCurrentAvatar();
+  document.getElementById('btn-next-eyes')?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (window.avatarGen && typeof EYE_STYLES !== 'undefined') {
+      let next = window.avatarGen.current.eyes + 1;
+      if (next > EYE_STYLES.length) next = 1;
+      window.avatarGen.current.eyes = next;
+      renderCurrentAvatar();
+    }
   });
 
-  document.getElementById('btn-prev-eyes').addEventListener('click', () => {
-    window.soundManager.playPop();
-    let prev = window.avatarGen.current.eyes - 1;
-    if (prev < 1) prev = EYE_STYLES.length;
-    window.avatarGen.current.eyes = prev;
-    renderCurrentAvatar();
+  document.getElementById('btn-prev-eyes')?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (window.avatarGen && typeof EYE_STYLES !== 'undefined') {
+      let prev = window.avatarGen.current.eyes - 1;
+      if (prev < 1) prev = EYE_STYLES.length;
+      window.avatarGen.current.eyes = prev;
+      renderCurrentAvatar();
+    }
   });
 
-  document.getElementById('btn-next-mouth').addEventListener('click', () => {
-    window.soundManager.playPop();
-    let next = window.avatarGen.current.mouth + 1;
-    if (next > MOUTH_STYLES.length) next = 1;
-    window.avatarGen.current.mouth = next;
-    renderCurrentAvatar();
+  document.getElementById('btn-next-mouth')?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (window.avatarGen && typeof MOUTH_STYLES !== 'undefined') {
+      let next = window.avatarGen.current.mouth + 1;
+      if (next > MOUTH_STYLES.length) next = 1;
+      window.avatarGen.current.mouth = next;
+      renderCurrentAvatar();
+    }
   });
 
-  document.getElementById('btn-prev-mouth').addEventListener('click', () => {
-    window.soundManager.playPop();
-    let prev = window.avatarGen.current.mouth - 1;
-    if (prev < 1) prev = MOUTH_STYLES.length;
-    window.avatarGen.current.mouth = prev;
-    renderCurrentAvatar();
+  document.getElementById('btn-prev-mouth')?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (window.avatarGen && typeof MOUTH_STYLES !== 'undefined') {
+      let prev = window.avatarGen.current.mouth - 1;
+      if (prev < 1) prev = MOUTH_STYLES.length;
+      window.avatarGen.current.mouth = prev;
+      renderCurrentAvatar();
+    }
   });
 
   // Dice randomize
-  document.getElementById('btn-random-avatar').addEventListener('click', () => {
-    window.soundManager.playPop();
-    window.avatarGen.randomize();
-    document.querySelectorAll('.avatar-color-swatch').forEach(s => {
-      s.classList.toggle('active', s.style.backgroundColor === window.avatarGen.current.color);
-    });
-    renderCurrentAvatar();
+  document.getElementById('btn-random-avatar')?.addEventListener('click', () => {
+    triggerHaptic('medium');
+    if (window.soundManager) window.soundManager.playPop();
+    if (window.avatarGen) {
+      window.avatarGen.randomize();
+      document.querySelectorAll('.avatar-color-swatch').forEach(s => {
+        s.classList.toggle('active', s.style.backgroundColor === window.avatarGen.current.color);
+      });
+      renderCurrentAvatar();
+    }
   });
 
   renderCurrentAvatar();
@@ -181,45 +254,51 @@ function setupAvatarUI() {
 
 function setupCanvasUI() {
   const paletteContainer = document.getElementById('canvas-palette');
-  paletteContainer.innerHTML = '';
-
-  DOODLE_PALETTE.forEach((colorHex, idx) => {
-    const swatch = document.createElement('div');
-    swatch.className = `palette-color ${idx === 0 ? 'active' : ''}`;
-    swatch.style.backgroundColor = colorHex;
-    swatch.addEventListener('click', () => {
-      window.soundManager.playPop();
-      canvasEngine.currentColor = colorHex;
-      document.querySelectorAll('.palette-color').forEach(s => s.classList.remove('active'));
-      swatch.classList.add('active');
+  if (paletteContainer) {
+    paletteContainer.innerHTML = '';
+    DOODLE_PALETTE.forEach((colorHex, idx) => {
+      const swatch = document.createElement('div');
+      swatch.className = `palette-color ${idx === 0 ? 'active' : ''}`;
+      swatch.style.backgroundColor = colorHex;
+      swatch.addEventListener('click', () => {
+        triggerHaptic('light');
+        if (window.soundManager) window.soundManager.playPop();
+        if (canvasEngine) canvasEngine.currentColor = colorHex;
+        document.querySelectorAll('.palette-color').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+      });
+      paletteContainer.appendChild(swatch);
     });
-    paletteContainer.appendChild(swatch);
-  });
+  }
 
   // Custom Color input
   const customColor = document.getElementById('custom-color-picker');
-  customColor.addEventListener('input', (e) => {
-    canvasEngine.currentColor = e.target.value;
-    document.querySelectorAll('.palette-color').forEach(s => s.classList.remove('active'));
-  });
+  if (customColor) {
+    customColor.addEventListener('input', (e) => {
+      if (canvasEngine) canvasEngine.currentColor = e.target.value;
+      document.querySelectorAll('.palette-color').forEach(s => s.classList.remove('active'));
+    });
+  }
 
   // Tool switches (brush, fill, eraser)
   document.querySelectorAll('.tool-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      window.soundManager.playPop();
+      triggerHaptic('light');
+      if (window.soundManager) window.soundManager.playPop();
       document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      canvasEngine.currentTool = btn.dataset.tool;
+      if (canvasEngine) canvasEngine.currentTool = btn.dataset.tool;
     });
   });
 
   // Brush Size buttons
   document.querySelectorAll('.size-dot').forEach(btn => {
     btn.addEventListener('click', () => {
-      window.soundManager.playPop();
+      triggerHaptic('light');
+      if (window.soundManager) window.soundManager.playPop();
       document.querySelectorAll('.size-dot').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      canvasEngine.currentSize = parseInt(btn.dataset.size, 10);
+      if (canvasEngine) canvasEngine.currentSize = parseInt(btn.dataset.size, 10);
     });
   });
 }
@@ -235,64 +314,91 @@ function setupLobbyActions() {
 
   // Random placeholder nickname
   const coolNames = ['CaptainDoodle', 'PixelPanda', 'SketchFox', 'ArtisticOtter', 'TurboPencil', 'CosmicCat'];
-  inputNickname.placeholder = coolNames[Math.floor(Math.random() * coolNames.length)];
+  if (inputNickname) {
+    inputNickname.placeholder = coolNames[Math.floor(Math.random() * coolNames.length)];
+  }
 
   // Lobby cam & mic toggle buttons
-  btnToggleCam.addEventListener('click', () => {
-    window.soundManager.playPop();
-    const active = webrtcManager.toggleCamera();
-    btnToggleCam.classList.toggle('active', active);
-    btnToggleCam.classList.toggle('muted', !active);
-    btnToggleCam.querySelector('.label').innerText = active ? 'Camera ON' : 'Camera OFF';
+  btnToggleCam?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (webrtcManager) {
+      const active = webrtcManager.toggleCamera();
+      btnToggleCam.classList.toggle('active', active);
+      btnToggleCam.classList.toggle('muted', !active);
+      const lbl = btnToggleCam.querySelector('.label');
+      if (lbl) lbl.innerText = active ? 'Camera ON' : 'Camera OFF';
+    }
   });
 
-  btnToggleMic.addEventListener('click', () => {
-    window.soundManager.playPop();
-    const active = webrtcManager.toggleMicrophone();
-    btnToggleMic.classList.toggle('active', active);
-    btnToggleMic.classList.toggle('muted', !active);
-    btnToggleMic.querySelector('.label').innerText = active ? 'Mic ON' : 'Mic MUTED';
+  btnToggleMic?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (webrtcManager) {
+      const active = webrtcManager.toggleMicrophone();
+      btnToggleMic.classList.toggle('active', active);
+      btnToggleMic.classList.toggle('muted', !active);
+      const lbl = btnToggleMic.querySelector('.label');
+      if (lbl) lbl.innerText = active ? 'Mic ON' : 'Mic MUTED';
+    }
   });
 
   // Create Room
-  btnCreateRoom.addEventListener('click', () => {
-    window.soundManager.playPop();
-    const nickname = inputNickname.value.trim() || inputNickname.placeholder;
-    const rounds = parseInt(document.getElementById('select-rounds').value, 10);
-    const drawTime = parseInt(document.getElementById('select-draw-time').value, 10);
+  btnCreateRoom?.addEventListener('click', () => {
+    triggerHaptic('success');
+    if (window.soundManager) window.soundManager.playPop();
+    if (!socket || !socket.connected) {
+      showToast('Connecting to server... Please try in a second.', 'info');
+      if (socket) socket.connect();
+      return;
+    }
+    const nickname = (inputNickname?.value || '').trim() || inputNickname?.placeholder || 'Player';
+    const roundsEl = document.getElementById('select-rounds');
+    const drawTimeEl = document.getElementById('select-draw-time');
+    const rounds = roundsEl ? parseInt(roundsEl.value, 10) : 3;
+    const drawTime = drawTimeEl ? parseInt(drawTimeEl.value, 10) : 60;
 
     socket.emit('create-room', {
       playerData: {
         name: nickname,
-        avatar: window.avatarGen.current,
-        videoEnabled: webrtcManager.videoEnabled,
-        audioEnabled: webrtcManager.audioEnabled
+        avatar: window.avatarGen ? window.avatarGen.current : { eyes: 1, mouth: 1, color: '#38bdf8' },
+        videoEnabled: webrtcManager ? webrtcManager.videoEnabled : true,
+        audioEnabled: webrtcManager ? webrtcManager.audioEnabled : true
       },
       settings: { rounds, drawTime }
     }, (res) => {
       if (res && res.success) {
         enterGameScreen(res);
+      } else {
+        showToast(res ? res.message : 'Error creating room', 'error');
       }
     });
   });
 
   // Join Room
-  btnJoinRoom.addEventListener('click', () => {
-    const code = inputRoomCode.value.trim().toUpperCase();
+  btnJoinRoom?.addEventListener('click', () => {
+    const code = (inputRoomCode?.value || '').trim().toUpperCase();
     if (!code) {
+      triggerHaptic('error');
       showToast('Please enter a 6-letter room code!', 'warning');
       return;
     }
-    window.soundManager.playPop();
-    const nickname = inputNickname.value.trim() || inputNickname.placeholder;
+    triggerHaptic('success');
+    if (window.soundManager) window.soundManager.playPop();
+    if (!socket || !socket.connected) {
+      showToast('Connecting to server... Please try in a second.', 'info');
+      if (socket) socket.connect();
+      return;
+    }
+    const nickname = (inputNickname?.value || '').trim() || inputNickname?.placeholder || 'Player';
 
     socket.emit('join-room', {
       roomCode: code,
       playerData: {
         name: nickname,
-        avatar: window.avatarGen.current,
-        videoEnabled: webrtcManager.videoEnabled,
-        audioEnabled: webrtcManager.audioEnabled
+        avatar: window.avatarGen ? window.avatarGen.current : { eyes: 1, mouth: 1, color: '#38bdf8' },
+        videoEnabled: webrtcManager ? webrtcManager.videoEnabled : true,
+        audioEnabled: webrtcManager ? webrtcManager.audioEnabled : true
       }
     }, (res) => {
       if (res && res.success) {
@@ -328,19 +434,22 @@ function enterGameScreen(roomData) {
 function setupInGameControls() {
   // In-Game Copy room code button
   const btnCopy = document.getElementById('btn-copy-room');
-  btnCopy.addEventListener('click', () => {
-    window.soundManager.playPop();
-    const inviteUrl = `${window.location.origin}${window.location.pathname}#${gameManager.roomCode}`;
+  btnCopy?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    const code = gameManager ? gameManager.roomCode : '';
+    const inviteUrl = `${window.location.origin}${window.location.pathname}#${code}`;
     navigator.clipboard.writeText(inviteUrl).then(() => {
       showToast('Invite link copied to clipboard! 📋', 'success');
     }).catch(() => {
-      navigator.clipboard.writeText(gameManager.roomCode);
-      showToast(`Room code ${gameManager.roomCode} copied!`, 'success');
+      navigator.clipboard.writeText(code);
+      showToast(`Room code ${code} copied!`, 'success');
     });
   });
 
   // Leave room button
-  document.getElementById('btn-leave-room').addEventListener('click', () => {
+  document.getElementById('btn-leave-room')?.addEventListener('click', () => {
+    triggerHaptic('medium');
     if (confirm('Are you sure you want to leave this game?')) {
       window.location.hash = '';
       window.location.reload();
@@ -351,29 +460,38 @@ function setupInGameControls() {
   const inGameCamBtn = document.getElementById('in-game-cam-toggle');
   const inGameMicBtn = document.getElementById('in-game-mic-toggle');
 
-  inGameCamBtn.addEventListener('click', () => {
-    window.soundManager.playPop();
-    const active = webrtcManager.toggleCamera();
-    inGameCamBtn.classList.toggle('active', active);
-    inGameCamBtn.classList.toggle('muted', !active);
-    inGameCamBtn.innerText = active ? '📹' : '🚫';
+  inGameCamBtn?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (webrtcManager) {
+      const active = webrtcManager.toggleCamera();
+      inGameCamBtn.classList.toggle('active', active);
+      inGameCamBtn.classList.toggle('muted', !active);
+      inGameCamBtn.innerText = active ? '📹' : '🚫';
+    }
   });
 
-  inGameMicBtn.addEventListener('click', () => {
-    window.soundManager.playPop();
-    const active = webrtcManager.toggleMicrophone();
-    inGameMicBtn.classList.toggle('active', active);
-    inGameMicBtn.classList.toggle('muted', !active);
-    inGameMicBtn.innerText = active ? '🎙️' : '🔇';
+  inGameMicBtn?.addEventListener('click', () => {
+    triggerHaptic('light');
+    if (window.soundManager) window.soundManager.playPop();
+    if (webrtcManager) {
+      const active = webrtcManager.toggleMicrophone();
+      inGameMicBtn.classList.toggle('active', active);
+      inGameMicBtn.classList.toggle('muted', !active);
+      inGameMicBtn.innerText = active ? '🎙️' : '🔇';
+    }
   });
 
   // Floating Reaction buttons (WhatsApp video call style)
   document.querySelectorAll('.btn-react').forEach(btn => {
     btn.addEventListener('click', () => {
+      triggerHaptic('light');
       const emoji = btn.dataset.reaction;
-      window.soundManager.playPop();
-      webrtcManager.triggerReactionAnimation(socket.id, emoji);
-      socket.emit('webrtc-reaction', { reaction: emoji });
+      if (window.soundManager) window.soundManager.playPop();
+      if (webrtcManager && socket) {
+        webrtcManager.triggerReactionAnimation(socket.id, emoji);
+        socket.emit('webrtc-reaction', { reaction: emoji });
+      }
     });
   });
 
@@ -384,20 +502,23 @@ function setupInGameControls() {
 
   if (btnToggleScoreboard && scoreboardDrawer) {
     btnToggleScoreboard.addEventListener('click', () => {
-      window.soundManager.playPop();
+      triggerHaptic('light');
+      if (window.soundManager) window.soundManager.playPop();
       scoreboardDrawer.classList.toggle('mobile-open');
     });
   }
 
   if (btnCloseScoreboard && scoreboardDrawer) {
     btnCloseScoreboard.addEventListener('click', () => {
-      window.soundManager.playPop();
+      triggerHaptic('light');
+      if (window.soundManager) window.soundManager.playPop();
       scoreboardDrawer.classList.remove('mobile-open');
     });
   }
 
   // Back to lobby from podium
-  document.getElementById('btn-back-to-lobby').addEventListener('click', () => {
+  document.getElementById('btn-back-to-lobby')?.addEventListener('click', () => {
+    triggerHaptic('medium');
     window.location.hash = '';
     window.location.reload();
   });

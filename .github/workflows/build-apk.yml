@@ -62,8 +62,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.4
-          name: "Zoodle Native Android App v1.0.4"
+          tag_name: v1.0.5
+          name: "Zoodle Native Android App v1.0.5"
           body: |
             🎨 **Zoodle - Multiplayer Scribble Game with WhatsApp-grade Video Conferencing**
             

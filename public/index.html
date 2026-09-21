@@ -394,6 +394,11 @@
 
   <!-- Socket.io client script & App scripts -->
   <script src="js/socket.io.min.js"></script>
+  <script>
+    if (typeof io === 'undefined') {
+      document.write('<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"><\/script>');
+    }
+  </script>
   <script src="js/sounds.js"></script>
   <script src="js/avatar.js"></script>
   <script src="js/canvas.js"></script>

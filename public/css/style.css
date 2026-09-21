@@ -27,15 +27,33 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #0b1329;
+  background-color: #0d1b2a;
   color: var(--color-dark);
   min-height: 100vh;
   overflow-x: hidden;
   user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+button {
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 /* Doodle Pattern Background */
@@ -53,6 +71,7 @@ body {
   display: none;
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 .screen.active {
   display: flex;
