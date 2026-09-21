@@ -18,6 +18,7 @@ class SoundManager {
   }
 
   playPop() {
+    if (typeof triggerHaptic === 'function') triggerHaptic('light');
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;
@@ -41,6 +42,7 @@ class SoundManager {
   }
 
   playCorrectGuess() {
+    if (typeof triggerHaptic === 'function') triggerHaptic('success');
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;

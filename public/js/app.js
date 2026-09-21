@@ -27,11 +27,24 @@ function showToast(message, type = 'info') {
     toast.style.transition = 'all 0.3s ease-out';
     setTimeout(() => toast.remove(), 300);
   }, 3500);
+function triggerHaptic(type = 'light') {
+  if (window.navigator && window.navigator.vibrate) {
+    if (type === 'light') window.navigator.vibrate(15);
+    else if (type === 'medium') window.navigator.vibrate(35);
+    else if (type === 'success') window.navigator.vibrate([40, 60, 90]);
+    else if (type === 'error') window.navigator.vibrate([60, 40, 60]);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Initialize Socket.IO
-  socket = io();
+  // 1. Initialize Socket.IO (Local bundle connects to live cloud server when in APK)
+  const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '3000';
+  const isWebHosted = window.location.protocol.startsWith('http') && !window.location.hostname.includes('capacitor') && !isLocalDev;
+  const BACKEND_URL = isWebHosted ? window.location.origin : (isLocalDev ? 'http://localhost:3000' : 'https://zoodle-kqah.onrender.com');
+  
+  socket = io(BACKEND_URL, {
+    transports: ['websocket', 'polling']
+  });
 
   // 2. Initialize Canvas Engine
   canvasEngine = new CanvasEngine('drawing-canvas');
