@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="pencilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="brushGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded App Tile -->
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)" stroke="#38bdf8" stroke-width="14"/>
+  
+  <!-- Cartoon Mascot Circle -->
+  <circle cx="256" cy="230" r="140" fill="#4ade80" stroke="#0f172a" stroke-width="12"/>
+  
+  <!-- Cartoon Face -->
+  <circle cx="210" cy="210" r="16" fill="#0f172a"/>
+  <circle cx="302" cy="210" r="16" fill="#0f172a"/>
+  <circle cx="216" cy="204" r="6" fill="#ffffff"/>
+  <circle cx="308" cy="204" r="6" fill="#ffffff"/>
+  
+  <!-- Cheeks -->
+  <ellipse cx="180" cy="245" rx="18" ry="10" fill="#f43f5e" opacity="0.5"/>
+  <ellipse cx="332" cy="245" rx="18" ry="10" fill="#f43f5e" opacity="0.5"/>
+  
+  <!-- Big Laughing Smile -->
+  <path d="M 200 250 Q 256 310 312 250" stroke="#0f172a" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <path d="M 230 270 Q 256 300 282 270 Z" fill="#f43f5e"/>
+
+  <!-- Pencil / Drawing Accent -->
+  <g transform="rotate(45, 380, 130)">
+    <rect x="350" y="80" width="60" height="150" rx="12" fill="url(#pencilGrad)" stroke="#0f172a" stroke-width="8"/>
+    <polygon points="350,80 410,80 380,20" fill="#fca5a5" stroke="#0f172a" stroke-width="8"/>
+    <polygon points="370,40 390,40 380,20" fill="#0f172a"/>
+    <rect x="350" y="200" width="60" height="30" fill="#e2e8f0" stroke="#0f172a" stroke-width="8"/>
+    <rect x="350" y="230" width="60" height="25" rx="6" fill="#f43f5e" stroke="#0f172a" stroke-width="8"/>
+  </g>
+
+  <!-- Fun Zoodle Title -->
+  <text x="256" y="440" text-anchor="middle" font-family="'Fredoka', cursive, sans-serif" font-weight="900" font-size="76" fill="#ffffff" stroke="#0f172a" stroke-width="10" paint-order="stroke fill">Zoodle</text>
+</svg>

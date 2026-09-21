@@ -1,0 +1,15 @@
+{
+  "appId": "com.zoodle.game",
+  "appName": "Zoodle",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://zoodle-kqah.onrender.com",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
