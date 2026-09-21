@@ -364,6 +364,25 @@ function setupInGameControls() {
     });
   });
 
+  // Mobile Scoreboard Toggle & Close
+  const btnToggleScoreboard = document.getElementById('btn-toggle-scoreboard');
+  const btnCloseScoreboard = document.getElementById('btn-close-scoreboard');
+  const scoreboardDrawer = document.getElementById('game-sidebar-left');
+
+  if (btnToggleScoreboard && scoreboardDrawer) {
+    btnToggleScoreboard.addEventListener('click', () => {
+      window.soundManager.playPop();
+      scoreboardDrawer.classList.toggle('mobile-open');
+    });
+  }
+
+  if (btnCloseScoreboard && scoreboardDrawer) {
+    btnCloseScoreboard.addEventListener('click', () => {
+      window.soundManager.playPop();
+      scoreboardDrawer.classList.remove('mobile-open');
+    });
+  }
+
   // Back to lobby from podium
   document.getElementById('btn-back-to-lobby').addEventListener('click', () => {
     window.location.hash = '';

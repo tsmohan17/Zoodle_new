@@ -194,6 +194,10 @@
           <button class="btn-copy-code" id="btn-copy-room">📋</button>
         </div>
 
+        <button id="btn-toggle-scoreboard" class="btn-toggle-scoreboard" title="View Scoreboard">
+          <span>🏆</span>
+        </button>
+
         <button id="btn-leave-room" class="btn-leave" title="Leave Room">✕</button>
       </div>
     </header>
@@ -201,11 +205,14 @@
     <!-- Main Game Board Grid -->
     <div class="game-grid-container">
       <!-- 1. Left Column: Player Leaderboard -->
-      <aside class="game-sidebar-left">
+      <aside class="game-sidebar-left" id="game-sidebar-left">
         <div class="scoreboard-card glass-panel">
           <div class="scoreboard-title">
-            <span>🏆 Players</span>
-            <span class="player-count-badge" id="player-count-badge">1</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span>🏆 Players</span>
+              <span class="player-count-badge" id="player-count-badge">1</span>
+            </div>
+            <button id="btn-close-scoreboard" class="scoreboard-close-btn" title="Close">✕</button>
           </div>
           <div class="players-list" id="players-list-container">
             <!-- Player items populated dynamically -->
